@@ -53,6 +53,14 @@ public abstract class SparkAdapter {
     public abstract float getY(int index);
 
     /**
+     * @return Whether a the point at the given index should be drawn connected to the graph.
+     * By default, every point in the adapter will connect to the graph.
+     */
+    protected boolean shouldConnect(int index) {
+        return true;
+    }
+
+    /**
      * Gets the float representation of the boundaries of the entire dataset. By default, this will
      * be the min and max of the actual data points in the adapter. This can be overridden for
      * custom behavior. When overriding, make sure to set RectF's values such that:

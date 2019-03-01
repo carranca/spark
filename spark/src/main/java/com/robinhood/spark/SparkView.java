@@ -25,6 +25,7 @@ import android.graphics.Canvas;
 import android.graphics.CornerPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Point;
 import android.graphics.RectF;
 import android.os.Build;
 import android.os.Handler;
@@ -44,6 +45,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
@@ -245,6 +247,11 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
         // make our main graph path
         sparkPath.reset();
+
+        // We may have multiple paths, if the graph is disjointed.
+        Path currentPath = new Path();
+        int currentPathStartIndex = 0;
+
         for (int i = 0; i < adapterCount; i++) {
             final float x = scaleHelper.getX(adapter.getX(i));
             final float y = scaleHelper.getY(adapter.getY(i));
@@ -255,24 +262,31 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
             yPoints.add(y);
 
             if (i == 0) {
-                sparkPath.moveTo(x, y);
+                currentPath.moveTo(x, y);
             } else {
-                sparkPath.lineTo(x, y);
+                if (!adapter.shouldConnect(i)) {
+                    if (currentPath != null) {
+                        // This path ends here.
+                        fillAndClosePath(currentPath, currentPathStartIndex, i - 1);
+                        sparkPath.addPath(currentPath);
+                        currentPath = null;
+                    }
+                } else {
+                    if (currentPath == null) {
+                        // Start of the new path
+                        currentPathStartIndex = i;
+                        currentPath = new Path();
+                        currentPath.moveTo(x, y);
+                    } else {
+                        currentPath.lineTo(x, y);
+                    }
+                }
             }
-
         }
 
-        // if we're filling the graph in, close the path's circuit
-        final Float fillEdge = getFillEdge();
-        if (fillEdge != null) {
-            final float lastX = scaleHelper.getX(adapter.getCount() - 1);
-            // line up or down to the fill edge
-            sparkPath.lineTo(lastX, fillEdge);
-            // line straight left to far edge of the view
-            sparkPath.lineTo(getPaddingStart(), fillEdge);
-            // closes line back on the first point
-            sparkPath.close();
-        }
+        // Add the last path to the list of paths.
+        fillAndClosePath(currentPath, currentPathStartIndex, adapter.getCount() - 1);
+        sparkPath.addPath(currentPath);
 
         // make our base line path
         baseLinePath.reset();
@@ -286,6 +300,22 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         renderPath.addPath(sparkPath);
 
         invalidate();
+    }
+
+    private void fillAndClosePath(Path path, int pathStartIndex, int pathEndIndex) {
+        // if we're filling the graph in, close the path's circuit
+        final Float fillEdge = getFillEdge();
+        if (fillEdge != null) {
+            final float firstX = scaleHelper.getX(adapter.getX(pathStartIndex));
+            final float lastX = scaleHelper.getX(adapter.getX(pathEndIndex));
+            // line up or down to the fill edge
+            path.lineTo(lastX, fillEdge);
+            // line straight left to far edge of the path
+            path.lineTo(getPaddingStart() + firstX, fillEdge);
+
+            // closes line back on the first point
+            path.close();
+        }
     }
 
     @Nullable
