@@ -100,6 +100,10 @@ Set a default style for all `SparkView`s in your app's theme:
 
         <item name="spark_scrubLineColor">@color/scrub_line_color</item>
         <item name="spark_scrubLineWidth">@dimen/scrub_line_width</item>
+
+        <item name="spark_unscrubbedLineColor">@color/spark_unscrubbedLineColor</item>
+        <item name="spark_unscrubbedFillColor">@color/spark_unscrubbedFillColor</item>
+
         <item name="spark_scrubEnabled">true</item>
 
         <item name="spark_animateChanges">true</item>
