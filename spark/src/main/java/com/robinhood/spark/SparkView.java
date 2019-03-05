@@ -94,6 +94,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     // styleable values
     @ColorInt private int lineColor;
     @ColorInt private int fillColor;
+    @ColorInt private int unscrubbedFillColor;
     private float lineWidth;
     private float cornerRadius;
     @FillType private int fillType = FillType.NONE;
@@ -121,6 +122,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     private Paint sparkFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint baseLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint scrubLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Paint unscrubbedSparkFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint unscrubbedSparkLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private @Nullable OnScrubListener scrubListener;
     private @NonNull ScrubGestureDetector scrubGestureDetector;
@@ -157,6 +159,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
         lineColor = a.getColor(R.styleable.SparkView_spark_lineColor, 0);
         fillColor = a.getColor(R.styleable.SparkView_spark_fillColor, 0);
+        unscrubbedFillColor = a.getColor(R.styleable.SparkView_spark_unscrubbedFillColor, 0);
         lineWidth = a.getDimension(R.styleable.SparkView_spark_lineWidth, 0);
         cornerRadius = a.getDimension(R.styleable.SparkView_spark_cornerRadius, 0);
 
@@ -186,10 +189,23 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
             sparkLinePaint.setPathEffect(new CornerPathEffect(cornerRadius));
         }
 
+        unscrubbedSparkLinePaint.setStyle(Paint.Style.STROKE);
+        unscrubbedSparkLinePaint.setStrokeWidth(unscrubbedLineWidth);
+        unscrubbedSparkLinePaint.setColor(unscrubbedLineColor);
+        unscrubbedSparkLinePaint.setStrokeCap(Paint.Cap.ROUND);
+        if (cornerRadius != 0) {
+            unscrubbedSparkLinePaint.setPathEffect(new CornerPathEffect(cornerRadius));
+        }
+
         sparkFillPaint.set(sparkLinePaint);
         sparkFillPaint.setColor(fillColor);
         sparkFillPaint.setStyle(Paint.Style.FILL);
         sparkFillPaint.setStrokeWidth(0);
+
+        unscrubbedSparkFillPaint.set(unscrubbedSparkLinePaint);
+        unscrubbedSparkFillPaint.setColor(unscrubbedFillColor);
+        unscrubbedSparkFillPaint.setStyle(Paint.Style.FILL);
+        unscrubbedSparkFillPaint.setStrokeWidth(0);
 
         baseLinePaint.setStyle(Paint.Style.STROKE);
         baseLinePaint.setColor(baseLineColor);
@@ -199,11 +215,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         scrubLinePaint.setStrokeWidth(scrubLineWidth);
         scrubLinePaint.setColor(scrubLineColor);
         scrubLinePaint.setStrokeCap(Paint.Cap.ROUND);
-
-        unscrubbedSparkLinePaint.setStyle(Paint.Style.STROKE);
-        unscrubbedSparkLinePaint.setStrokeWidth(unscrubbedLineWidth);
-        unscrubbedSparkLinePaint.setColor(unscrubbedLineColor);
-        unscrubbedSparkLinePaint.setStrokeCap(Paint.Cap.ROUND);
 
         final Handler handler = new Handler();
         final float touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
@@ -452,21 +463,30 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
                 scrubLine - 1,
                 contentRect.bottom);
             canvas.drawPath(sparkPath, sparkLinePaint);
+            if(fillType != FillType.NONE) {
+                canvas.drawPath(sparkPath, sparkFillPaint);
+            }
+
             canvas.restore();
 
             // Draw and clip the unscrubbed path
+            canvas.save();
             canvas.clipRect(
                 scrubLine + 1,
                 contentRect.top,
                 contentRect.right,
                 contentRect.bottom);
             canvas.drawPath(sparkPath, unscrubbedSparkLinePaint);
+            if(fillType != FillType.NONE) {
+                canvas.drawPath(sparkPath, unscrubbedSparkFillPaint);
+            }
+
+            canvas.restore();
         } else {
             canvas.drawPath(sparkPath, sparkLinePaint);
-        }
-
-        if(fillType != FillType.NONE) {
-            canvas.drawPath(sparkPath, sparkFillPaint);
+            if(fillType != FillType.NONE) {
+                canvas.drawPath(sparkPath, sparkFillPaint);
+            }
         }
 
         canvas.drawPath(scrubLinePath, scrubLinePaint);
@@ -505,6 +525,22 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     }
 
     /**
+     * Get the color of the unscrubbed sparkline
+     */
+    @ColorInt public int getUnscrubbedFillColor() {
+        return unscrubbedFillColor;
+    }
+
+    /**
+     * Set the color of the unscrubbed sparkline
+     */
+    public void setUnscrubbedFillColor(@ColorInt int fillColor) {
+        this.unscrubbedFillColor = fillColor;
+        unscrubbedSparkFillPaint.setColor(fillColor);
+        invalidate();
+    }
+
+    /**
      * Get the width in pixels of the sparkline's stroke
      */
     public float getLineWidth() {
@@ -535,10 +571,14 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         this.cornerRadius = cornerRadius;
         if (cornerRadius != 0) {
             sparkLinePaint.setPathEffect(new CornerPathEffect(cornerRadius));
+            unscrubbedSparkLinePaint.setPathEffect(new CornerPathEffect(cornerRadius));
             sparkFillPaint.setPathEffect(new CornerPathEffect(cornerRadius));
+            unscrubbedSparkFillPaint.setPathEffect(new CornerPathEffect(cornerRadius));
         } else {
             sparkLinePaint.setPathEffect(null);
+            unscrubbedSparkLinePaint.setPathEffect(null);
             sparkFillPaint.setPathEffect(null);
+            unscrubbedSparkFillPaint.setPathEffect(null);
         }
         invalidate();
     }
@@ -664,6 +704,29 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     public Paint getSparkFillPaint() {
         return sparkFillPaint;
     }
+
+    /**
+     /**
+     * Set the {@link Paint} to be used to draw the unscrubbed spark fill.
+     * Warning: setting a paint other than the instance returned by
+     * {@link #getUnscrubbedSparkFillPaint()} ()} may result in loss of style attributes
+     * specified on this view.
+     */
+    public void setUnscrubbedSparkFillPaint(@NonNull Paint pathPaint) {
+        this.unscrubbedSparkFillPaint = pathPaint;
+        invalidate();
+    }
+
+    /**
+     * Get the {@link Paint} used to draw the unscrubbed spark fill.
+     * Any modifications to this {@link Paint} will not reflect until the next call
+     * to {@link #invalidate()}
+     */
+    @NonNull
+    public Paint getUnscrubbedSparkFillPaint() {
+        return unscrubbedSparkFillPaint;
+    }
+
     /**
      * Get the color of the base line
      */
