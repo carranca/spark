@@ -25,8 +25,9 @@ import android.graphics.Canvas;
 import android.graphics.CornerPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Region;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.ColorInt;
@@ -45,7 +46,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
@@ -54,6 +54,7 @@ import java.util.Locale;
  */
 public class SparkView extends View implements ScrubGestureDetector.ScrubListener {
     private static final String TAG = "Spark";
+    private @Nullable Float scrubLine;
 
     /**
      * Holds the fill type constants to be used with {@linkplain #getFillType()} and
@@ -100,11 +101,13 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     private float baseLineWidth;
     @ColorInt private int scrubLineColor;
     private float scrubLineWidth;
+    @ColorInt private int unscrubbedLineColor;
+    private float unscrubbedLineWidth;
     private boolean scrubEnabled;
     private @Nullable SparkAnimator sparkAnimator;
 
     // the onDraw data
-    private final Path renderPath = new Path();
+    private final Path animationPath = new Path();
     private final Path sparkPath = new Path();
     private final Path baseLinePath = new Path();
     private final Path scrubLinePath = new Path();
@@ -118,6 +121,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     private Paint sparkFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint baseLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Paint scrubLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Paint unscrubbedSparkLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private @Nullable OnScrubListener scrubListener;
     private @NonNull ScrubGestureDetector scrubGestureDetector;
     private @Nullable Animator pathAnimator;
@@ -169,6 +173,8 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         scrubEnabled = a.getBoolean(R.styleable.SparkView_spark_scrubEnabled, true);
         scrubLineColor = a.getColor(R.styleable.SparkView_spark_scrubLineColor, baseLineColor);
         scrubLineWidth = a.getDimension(R.styleable.SparkView_spark_scrubLineWidth, lineWidth);
+        unscrubbedLineColor = a.getColor(R.styleable.SparkView_spark_unscrubbedLineColor, baseLineColor);
+        unscrubbedLineWidth = a.getDimension(R.styleable.SparkView_spark_unscrubbedLineWidth, lineWidth);
         boolean animateChanges = a.getBoolean(R.styleable.SparkView_spark_animateChanges, false);
         a.recycle();
 
@@ -193,6 +199,11 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         scrubLinePaint.setStrokeWidth(scrubLineWidth);
         scrubLinePaint.setColor(scrubLineColor);
         scrubLinePaint.setStrokeCap(Paint.Cap.ROUND);
+
+        unscrubbedSparkLinePaint.setStyle(Paint.Style.STROKE);
+        unscrubbedSparkLinePaint.setStrokeWidth(unscrubbedLineWidth);
+        unscrubbedSparkLinePaint.setColor(unscrubbedLineColor);
+        unscrubbedSparkLinePaint.setStrokeCap(Paint.Cap.ROUND);
 
         final Handler handler = new Handler();
         final float touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
@@ -296,9 +307,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
             baseLinePath.lineTo(getWidth(), scaledBaseLine);
         }
 
-        renderPath.reset();
-        renderPath.addPath(sparkPath);
-
         invalidate();
     }
 
@@ -382,18 +390,24 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
      * Set the path to animate in onDraw, used for getAnimation purposes
      */
     public void setAnimationPath(@NonNull Path animationPath) {
-        this.renderPath.reset();
-        this.renderPath.addPath(animationPath);
-        this.renderPath.rLineTo(0, 0);
+        this.animationPath.reset();
+        this.animationPath.addPath(animationPath);
+        this.animationPath.rLineTo(0, 0);
 
         invalidate();
     }
 
-    private void setScrubLine(float x) {
-        x = resolveBoundedScrubLine(x);
+    private void setScrubLine(@Nullable Float scrubLineX) {
         scrubLinePath.reset();
-        scrubLinePath.moveTo(x, getPaddingTop());
-        scrubLinePath.lineTo(x, getHeight() - getPaddingBottom());
+
+        if (scrubLineX == null) {
+            scrubLine = null;
+        } else {
+            scrubLine = resolveBoundedScrubLine(scrubLineX);
+            scrubLinePath.moveTo(scrubLine, getPaddingTop());
+            scrubLinePath.lineTo(scrubLine, getHeight() - getPaddingBottom());
+        }
+
         invalidate();
     }
 
@@ -423,16 +437,38 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         populatePath();
     }
 
-    @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        canvas.save();
         canvas.drawPath(baseLinePath, baseLinePaint);
+        canvas.restore();
 
-        if(fillType != FillType.NONE){
-            canvas.drawPath(renderPath, sparkFillPaint);
+        if (scrubLine != null) {
+            // Draw and clip the scrubbed path
+            canvas.save();
+            canvas.clipRect(
+                contentRect.left,
+                contentRect.top,
+                scrubLine - 1,
+                contentRect.bottom);
+            canvas.drawPath(sparkPath, sparkLinePaint);
+            canvas.restore();
+
+            // Draw and clip the unscrubbed path
+            canvas.clipRect(
+                scrubLine + 1,
+                contentRect.top,
+                contentRect.right,
+                contentRect.bottom);
+            canvas.drawPath(sparkPath, unscrubbedSparkLinePaint);
+        } else {
+            canvas.drawPath(sparkPath, sparkLinePaint);
         }
 
-        canvas.drawPath(renderPath, sparkLinePaint);
+        if(fillType != FillType.NONE) {
+            canvas.drawPath(sparkPath, sparkFillPaint);
+        }
+
         canvas.drawPath(scrubLinePath, scrubLinePaint);
     }
 
@@ -696,6 +732,38 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     }
 
     /**
+     * Set the color of the line to the right of the scrub line
+     */
+    public void setUnscrubbedLineColor(@ColorInt int unscrubbedLineColor) {
+        this.unscrubbedLineColor = unscrubbedLineColor;
+        unscrubbedSparkLinePaint.setColor(unscrubbedLineColor);
+        invalidate();
+    }
+
+    /**
+     * Get the color of the line to the right of the scrub line
+     */
+    @ColorInt public int getUnscrubbedLineColor() {
+        return unscrubbedLineColor;
+    }
+
+    /**
+     * Get the width in pixels of the unscrubbed sparkline's stroke
+     */
+    public float getUnscrubbedLineWidth() {
+        return unscrubbedLineWidth;
+    }
+
+    /**
+     * Set the width in pixels of the unscrubbed sparkline's stroke
+     */
+    public void setUnscrubbedLineWidth(float unscrubbedLineWidth) {
+        this.unscrubbedLineWidth = unscrubbedLineWidth;
+        unscrubbedSparkLinePaint.setStrokeWidth(unscrubbedLineWidth);
+        invalidate();
+    }
+
+    /**
      * Get the width in pixels of the scrub line's stroke
      */
     public float getScrubLineWidth() {
@@ -805,7 +873,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
     private void clearData() {
         scaleHelper = null;
-        renderPath.reset();
+        animationPath.reset();
         sparkPath.reset();
         baseLinePath.reset();
         invalidate();
@@ -946,9 +1014,8 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
     @Override
     public void onScrubEnded() {
-        scrubLinePath.reset();
         if (scrubListener != null) scrubListener.onScrubbed(null);
-        invalidate();
+        setScrubLine(null);
     }
 
     /**
