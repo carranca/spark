@@ -53,11 +53,19 @@ public abstract class SparkAdapter {
     public abstract float getY(int index);
 
     /**
-     * @return Whether a the point at the given index should be drawn connected to the graph.
+     * @return Whether the point at the given index should be drawn connected to the graph.
      * By default, every point in the adapter will connect to the graph.
      */
     protected boolean shouldConnect(int index) {
         return true;
+    }
+
+    /**
+     * @return Whether the point at the given index represents a special event that should be
+     * treated differently and might contain additional metadata.
+     */
+    protected boolean isEvent(int index) {
+        return false;
     }
 
     /**
