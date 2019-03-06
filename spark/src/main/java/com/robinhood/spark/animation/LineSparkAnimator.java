@@ -25,30 +25,30 @@ public class LineSparkAnimator extends Animator implements SparkAnimator {
     @Nullable
     @Override
     public Animator getAnimation(final SparkView sparkView) {
-        final Path linePath = sparkView.getSparkLinePath();
-
-        // get path length
-        final PathMeasure pathMeasure = new PathMeasure(linePath, false);
-        final float endLength = pathMeasure.getLength();
-
-        if (endLength <= 0) {
-            return null;
-        }
-
-        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                float animatedValue = (float) animation.getAnimatedValue();
-
-                float animatedPathLength = animatedValue * endLength;
-
-                linePath.reset();
-                pathMeasure.getSegment(0, animatedPathLength, linePath, true);
-
-                // set the updated path for the animation
-                sparkView.setAnimationPath(linePath);
-            }
-        });
+        //final Path linePath = sparkView.getSparkLinePath();
+        //
+        //// get path length
+        //final PathMeasure pathMeasure = new PathMeasure(linePath, false);
+        //final float endLength = pathMeasure.getLength();
+        //
+        //if (endLength <= 0) {
+        //    return null;
+        //}
+        //
+        //animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+        //    @Override
+        //    public void onAnimationUpdate(ValueAnimator animation) {
+        //        float animatedValue = (float) animation.getAnimatedValue();
+        //
+        //        float animatedPathLength = animatedValue * endLength;
+        //
+        //        linePath.reset();
+        //        pathMeasure.getSegment(0, animatedPathLength, linePath, true);
+        //
+        //        // set the updated path for the animation
+        //        sparkView.setAnimationPath(linePath);
+        //    }
+        //});
 
         return animator;
     }

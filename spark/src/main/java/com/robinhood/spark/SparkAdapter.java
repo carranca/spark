@@ -53,11 +53,12 @@ public abstract class SparkAdapter {
     public abstract float getY(int index);
 
     /**
-     * @return Whether the point at the given index should be drawn connected to the graph.
-     * By default, every point in the adapter will connect to the graph.
+     * @return The path type for the path connecting to the point at the given index
+     * By default, the legacy path type (before support for multiple path types was added) will be
+     * used.
      */
-    protected boolean shouldConnect(int index) {
-        return true;
+    protected SparkViewModel.SparkPathType getPathType(int index) {
+        return SparkViewModel.LegacySparkPathType.INSTANCE;
     }
 
     /**
