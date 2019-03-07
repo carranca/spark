@@ -1,31 +1,49 @@
 package com.robinhood.spark;
 
-import android.graphics.Path;
+import android.support.annotation.Nullable;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
-class SparkPaths {
-  final Map<SparkViewModel.SparkPathType, List<Path>> paths = new HashMap<>();
+public class SparkPaths {
+  public final Map<SparkViewModel.SparkPathType, SparkPath> paths = new HashMap<>();
 
-  void add(SparkPath path) {
-    List<Path> pathsForType = paths.get(path.pathType);
-    if (pathsForType == null) {
-      pathsForType = new LinkedList<>();
+  void startPathSegment(SparkViewModel.SparkPathType pathType, int index, float x, float y) {
+    SparkPath sparkPath = paths.get(pathType);
+    if (sparkPath == null) {
+      sparkPath = new SparkPath(pathType);
+      paths.put(pathType, sparkPath);
     }
 
-    pathsForType.add(path);
-    paths.put(path.pathType, pathsForType);
+    sparkPath.startSegment(x, y);
   }
 
-  void clear() {
+  void endPathSegment(
+      SparkViewModel.SparkPathType pathType,
+      @Nullable Float fillEdge,
+      int startPadding
+  ) {
+    SparkPath sparkPath = paths.get(pathType);
+    if (sparkPath == null) {
+      throw new IllegalStateException("Trying to end path segment, but no such path exists");
+    }
+
+    sparkPath.endSegment(fillEdge, startPadding);
+  }
+
+  void addToPathSegment(SparkViewModel.SparkPathType pathType, float x, float y) {
+    SparkPath sparkPath = paths.get(pathType);
+    if (sparkPath == null) {
+      throw new IllegalStateException("Trying to add to path segment, but no such path exists");
+    }
+
+    sparkPath.addPointToSegment(x, y);
+  }
+
+  void reset() {
     for (SparkViewModel.SparkPathType pathType : paths.keySet()) {
-      for (Path path : paths.get(pathType)) {
-        path.reset();
-      }
+      paths.get(pathType).reset();
     }
-
-    paths.clear();
   }
+
+
 }

@@ -282,6 +282,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
         scaleHelper = new ScaleHelper(adapter, contentRect, lineWidth, isFillInternal());
 
+        // Reset points caches
         xPoints.clear();
         yPoints.clear();
 
@@ -289,10 +290,9 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         eventsPath.reset();
 
         // Reset all of our paths.
-        sparkPaths.clear();
+        sparkPaths.reset();
 
-        // We may have multiple paths
-        SparkPath currentPath = null;
+        SparkPathType currentPathType = null;
 
         for (int i = 0; i < adapterCount; i++) {
             final float x = scaleHelper.getX(adapter.getX(i));
@@ -305,20 +305,20 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
             final SparkPathType pathType = adapter.getPathType(i);
 
-            if (currentPath == null) {
-                currentPath = new SparkPath(pathType, i);
-                currentPath.moveTo(x, y);
+            if (currentPathType == null) {
+                sparkPaths.startPathSegment(pathType, i, x, y);
+                currentPathType = pathType;
             }
 
-            if (!pathType.equals(currentPath.pathType)) {
+            if (!pathType.equals(currentPathType)) {
                 // We're starting a new path, so the current one ends here.
-                endPath(currentPath);
+                sparkPaths.endPathSegment(currentPathType, getFillEdge(), getPaddingStart());
 
                 // Start a new path.
-                currentPath = new SparkPath(pathType, i);
-                currentPath.moveTo(x, y);
+                sparkPaths.startPathSegment(pathType, i, x, y);
+                currentPathType = pathType;
             } else {
-                currentPath.lineTo(x, y);
+                sparkPaths.addToPathSegment(pathType, x, y);
             }
 
             // If this is a special event, it needs some extra processing.
@@ -329,12 +329,10 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
                 dot.close();
                 eventsPath.addPath(dot);
             }
-
-            currentPath.addPoint(x, y);
         }
 
         // Add the last path to the list of paths.
-        endPath(currentPath);
+        sparkPaths.endPathSegment(currentPathType, getFillEdge(), getPaddingStart());
 
         // make our base line path
         baseLinePath.reset();
@@ -345,12 +343,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         }
 
         invalidate();
-    }
-
-    private void endPath(SparkPath path) {
-        // if we're filling the graph in, close the path's circuit
-        path.fillAndClose(getFillEdge(), getPaddingStart());
-        sparkPaths.add(path);
     }
 
     @Nullable
@@ -371,6 +363,10 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
                         String.format(Locale.US, "Unknown fill-type: %d", fillType)
                 );
         }
+    }
+
+    public SparkPaths getSparkPaths() {
+        return sparkPaths;
     }
 
     /**
@@ -463,6 +459,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         canvas.restore();
 
         for (SparkPathType pathType : sparkPaths.paths.keySet()) {
+            SparkPath sparkPath = sparkPaths.paths.get(pathType);
             if (scrubLine != null) {
                 // Draw and clip the scrubbed path
                 canvas.save();
@@ -471,11 +468,9 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
                     contentRect.top,
                     scrubLine - 1,
                     contentRect.bottom);
-                for (Path path : sparkPaths.paths.get(pathType)) {
-                    canvas.drawPath(path, scrubbedLinePaints.get(pathType));
-                    if (fillType != FillType.NONE) {
-                        canvas.drawPath(path, sparkFillPaint);
-                    }
+                canvas.drawPath(sparkPath, scrubbedLinePaints.get(pathType));
+                if (fillType != FillType.NONE) {
+                    canvas.drawPath(sparkPath, sparkFillPaint);
                 }
 
                 // Draw events in the same clipping area.
@@ -490,11 +485,9 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
                     contentRect.top,
                     contentRect.right,
                     contentRect.bottom);
-                for (Path path : sparkPaths.paths.get(pathType)) {
-                    canvas.drawPath(path, unscrubbedLinePaints.get(pathType));
-                    if (fillType != FillType.NONE) {
-                        canvas.drawPath(path, unscrubbedSparkFillPaint);
-                    }
+                canvas.drawPath(sparkPath, unscrubbedLinePaints.get(pathType));
+                if (fillType != FillType.NONE) {
+                    canvas.drawPath(sparkPath, unscrubbedSparkFillPaint);
                 }
 
                 // Draw events in the same clipping area.
@@ -502,17 +495,12 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
                 canvas.restore();
             } else {
-                for (Path path : sparkPaths.paths.get(pathType)) {
-                    canvas.drawPath(path, defaultLinePaints.get(pathType));
-                    if (fillType != FillType.NONE) {
-                        canvas.drawPath(path, sparkFillPaint);
-                    }
-
-                    //Paint p = new Paint(defaultSparkLinePaint);
-                    //p.setColor(getResources().getColor(android.R.color.holo_red_dark));
-                    //canvas.drawPath(eventsPath, p);
-                    canvas.drawPath(eventsPath, defaultEventPaints.get(pathType));
+                canvas.drawPath(sparkPath, defaultLinePaints.get(pathType));
+                if (fillType != FillType.NONE) {
+                    canvas.drawPath(sparkPath, sparkFillPaint);
                 }
+
+                canvas.drawPath(eventsPath, defaultEventPaints.get(pathType));
             }
         }
 
@@ -1001,7 +989,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
     private void clearData() {
         scaleHelper = null;
-        sparkPaths.clear();
+        sparkPaths.reset();
         baseLinePath.reset();
         eventsPath.reset();
         invalidate();
