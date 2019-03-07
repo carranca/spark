@@ -27,6 +27,8 @@
         <attr name="spark_unscrubbedLineColor" format="color|reference" />
         <attr name="spark_unscrubbedLineWidth" format="dimension|reference" />
 
+        <attr name="spark_eventDotRadius" format="dimension|reference" />
+
         <attr name="spark_scrubEnabled" format="boolean|reference" />
 
         <attr name="spark_animateChanges" format="boolean|reference" />
