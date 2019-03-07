@@ -7,6 +7,16 @@ import java.util.Map;
 public class SparkPaths {
   public final Map<SparkViewModel.SparkPathType, SparkPath> paths = new HashMap<>();
 
+  SparkPaths() {
+
+  }
+
+  SparkPaths(SparkPaths source) {
+    for (SparkViewModel.SparkPathType pathType : source.paths.keySet()) {
+      paths.put(pathType, new SparkPath(source.paths.get(pathType)));
+    }
+  }
+
   void startPathSegment(SparkViewModel.SparkPathType pathType, int index, float x, float y) {
     SparkPath sparkPath = paths.get(pathType);
     if (sparkPath == null) {

@@ -30,52 +30,52 @@ public class MorphSparkAnimator extends Animator implements SparkAnimator {
     @Nullable
     @Override
     public Animator getAnimation(final SparkView sparkView) {
-
-        final List<Float> xPoints = sparkView.getXPoints();
-        final List<Float> yPoints = sparkView.getYPoints();
-
-        if (xPoints.isEmpty() || yPoints.isEmpty()) {
-            return null;
-        }
-
-        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-
-                float animatedValue = (float) animation.getAnimatedValue();
-
-                animationPath.reset();
-
-                float step;
-                float y, oldY;
-                int size = xPoints.size();
-                for (int count = 0; count < size; count++) {
-
-                    // get oldY, can be 0 (zero) if current points are larger
-                    oldY = oldYPoints != null && oldYPoints.size() > count ? oldYPoints.get(count) : 0f;
-
-                    step = yPoints.get(count) - oldY;
-                    y = (step * animatedValue) + oldY;
-
-                    if (count == 0) {
-                        animationPath.moveTo(xPoints.get(count), y);
-                    } else {
-                        animationPath.lineTo(xPoints.get(count), y);
-                    }
-
-                }
-
-                // set the updated path for the animation
-                sparkView.setAnimationPath(animationPath);
-            }
-        });
-
-        animator.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                oldYPoints = yPoints;
-            }
-        });
+        //
+        //final List<Float> xPoints = sparkView.getXPoints();
+        //final List<Float> yPoints = sparkView.getYPoints();
+        //
+        //if (xPoints.isEmpty() || yPoints.isEmpty()) {
+        //    return null;
+        //}
+        //
+        //animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+        //    @Override
+        //    public void onAnimationUpdate(ValueAnimator animation) {
+        //
+        //        float animatedValue = (float) animation.getAnimatedValue();
+        //
+        //        animationPath.reset();
+        //
+        //        float step;
+        //        float y, oldY;
+        //        int size = xPoints.size();
+        //        for (int count = 0; count < size; count++) {
+        //
+        //            // get oldY, can be 0 (zero) if current points are larger
+        //            oldY = oldYPoints != null && oldYPoints.size() > count ? oldYPoints.get(count) : 0f;
+        //
+        //            step = yPoints.get(count) - oldY;
+        //            y = (step * animatedValue) + oldY;
+        //
+        //            if (count == 0) {
+        //                animationPath.moveTo(xPoints.get(count), y);
+        //            } else {
+        //                animationPath.lineTo(xPoints.get(count), y);
+        //            }
+        //
+        //        }
+        //
+        //        // set the updated path for the animation
+        //        sparkView.setAnimationPath(animationPath);
+        //    }
+        //});
+        //
+        //animator.addListener(new AnimatorListenerAdapter() {
+        //    @Override
+        //    public void onAnimationEnd(Animator animation) {
+        //        oldYPoints = yPoints;
+        //    }
+        //});
 
         return animator;
     }

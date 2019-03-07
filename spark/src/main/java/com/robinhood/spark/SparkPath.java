@@ -5,12 +5,22 @@ import android.support.annotation.Nullable;
 import java.util.LinkedList;
 import java.util.List;
 
-public class SparkPath extends Path {
+public class SparkPath {
+  public final List<SparkPathSegment> segments = new LinkedList<>();
   @Nullable private SparkPathSegment currentSegment = null;
-  private final SparkViewModel.SparkPathType pathType;
+  public final SparkViewModel.SparkPathType pathType;
 
   SparkPath(SparkViewModel.SparkPathType pathType) {
     this.pathType = pathType;
+  }
+
+  SparkPath(SparkPath source) {
+    this(source.pathType);
+
+    for (SparkPathSegment sourceSegment : source.segments) {
+      final SparkPathSegment newSegment = new SparkPathSegment(sourceSegment);
+      segments.add(newSegment);
+    }
   }
 
   void startSegment(float x, float y) {
@@ -18,7 +28,7 @@ public class SparkPath extends Path {
       throw new IllegalStateException("trying to start segment but a segment already exists");
     }
 
-    currentSegment = new SparkPathSegment();
+    currentSegment = new SparkPathSegment(pathType, segments.size());
     currentSegment.moveTo(x, y);
   }
 
@@ -28,7 +38,7 @@ public class SparkPath extends Path {
     }
 
     currentSegment.fillAndClose(fillEdge, startPadding);
-    addPath(currentSegment);
+    segments.add(currentSegment);
     currentSegment = null;
   }
 
@@ -40,17 +50,41 @@ public class SparkPath extends Path {
     currentSegment.lineTo(x, y);
   }
 
-  @Override public void reset() {
-    super.reset();
+  public void reset() {
+    for (SparkPathSegment segment : segments) {
+      segment.reset();
+    }
+
+    segments.clear();
 
     if (currentSegment != null) {
       currentSegment.reset();
     }
   }
 
-  static class SparkPathSegment extends Path {
-    final List<Float> xPoints = new LinkedList<>();
+  public void replaceSegment(int indexInSparkPath, SparkPathSegment linePath) {
+    SparkPathSegment oldSegment = segments.set(indexInSparkPath, linePath);
+    oldSegment.reset();
+  }
+
+  public static class SparkPathSegment extends Path {
+    public final List<Float> xPoints = new LinkedList<>();
     final List<Float> yPoints = new LinkedList<>();
+    public final SparkViewModel.SparkPathType pathType;
+    public final int indexInSparkPath;
+
+    public SparkPathSegment(SparkViewModel.SparkPathType pathType, int indexInSparkPath) {
+      this.pathType = pathType;
+      this.indexInSparkPath = indexInSparkPath;
+    }
+
+    public SparkPathSegment(SparkPathSegment source) {
+      super(source);
+      this.pathType = source.pathType;
+      this.indexInSparkPath = source.indexInSparkPath;
+      this.xPoints.addAll(source.xPoints);
+      this.yPoints.addAll(source.yPoints);
+    }
 
     @Override public void moveTo(float x, float y) {
       super.moveTo(x, y);
@@ -86,6 +120,31 @@ public class SparkPath extends Path {
 
       xPoints.clear();
       yPoints.clear();
+    }
+
+    @Override public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      SparkPathSegment that = (SparkPathSegment) o;
+
+      if (indexInSparkPath != that.indexInSparkPath) return false;
+      return pathType.equals(that.pathType);
+    }
+
+    @Override public int hashCode() {
+      int result = pathType.hashCode();
+      result = 31 * result + indexInSparkPath;
+      return result;
+    }
+
+    @Override public String toString() {
+      return "SparkPathSegment{" +
+          "xPoints=" + xPoints.size() +
+          ", yPoints=" + yPoints.size() +
+          ", pathType=" + pathType.getClass().getSimpleName() +
+          ", indexInSparkPath=" + indexInSparkPath +
+          '}';
     }
   }
 
