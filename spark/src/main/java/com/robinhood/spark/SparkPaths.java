@@ -17,7 +17,7 @@ public class SparkPaths {
     }
   }
 
-  void startPathSegment(SparkViewModel.SparkPathType pathType, int index, float x, float y) {
+  void startPathSegment(SparkViewModel.SparkPathType pathType, float x, float y) {
     SparkPath sparkPath = paths.get(pathType);
     if (sparkPath == null) {
       sparkPath = new SparkPath(pathType);

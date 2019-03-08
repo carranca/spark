@@ -148,7 +148,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     private @Nullable RectF contentClip = null;
 
     private List<Float> xPoints;
-    private List<Float> yPoints;
 
     public SparkView(Context context) {
         super(context);
@@ -236,7 +235,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         setOnTouchListener(scrubGestureDetector);
 
         xPoints = new ArrayList<>();
-        yPoints = new ArrayList<>();
 
         if (isInEditMode()) {
             this.setAdapter(new SparkAdapter() {
@@ -286,7 +284,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
         // Reset points caches
         xPoints.clear();
-        yPoints.clear();
 
         // make our main graph path
         eventsPath.reset();
@@ -300,15 +297,12 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
             final float x = scaleHelper.getX(adapter.getX(i));
             final float y = scaleHelper.getY(adapter.getY(i));
 
-            // points to render graphic
-            // get points to animate
             xPoints.add(x);
-            yPoints.add(y);
 
             final SparkPathType pathType = adapter.getPathType(i);
 
             if (currentPathType == null) {
-                sparkPaths.startPathSegment(pathType, i, x, y);
+                sparkPaths.startPathSegment(pathType, x, y);
                 currentPathType = pathType;
             }
 
@@ -317,7 +311,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
                 sparkPaths.endPathSegment(currentPathType, getFillEdge(), getPaddingStart());
 
                 // Start a new path.
-                sparkPaths.startPathSegment(pathType, i, x, y);
+                sparkPaths.startPathSegment(pathType, x, y);
                 currentPathType = pathType;
             } else {
                 sparkPaths.addToPathSegment(pathType, x, y);
@@ -349,6 +343,10 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
         contentClip = null;
 
+        if (sparkAnimator != null) {
+            sparkAnimator.onNewPathsPopulated(this);
+        }
+
         invalidate();
     }
 
@@ -378,11 +376,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
     public RectF getContentRect() {
         return contentRect;
-    }
-
-    public void setContentClip(@Nullable RectF newContentRect) {
-        this.contentClip = newContentRect;
-        invalidate();
     }
 
     /**
@@ -423,6 +416,11 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     public void setAnimationPath(SparkPaths animationPath) {
         renderPaths.reset();
         renderPaths = new SparkPaths(animationPath);
+        invalidate();
+    }
+
+    public void setContentClip(@Nullable RectF newContentRect) {
+        this.contentClip = newContentRect;
         invalidate();
     }
 
@@ -486,8 +484,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
             SparkPath sparkPath = renderPaths.paths.get(pathType);
             for (SparkPath.SparkPathSegment segment : sparkPath.segments) {
 
-                canvas.save(); //todo: might be unnecessary
-
                 if (scrubLine != null) {
                     // Draw and clip the scrubbed path
                     canvas.save();
@@ -530,8 +526,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
                     canvas.drawPath(eventsPath, defaultEventPaints.get(pathType));
                 }
-
-                canvas.restore(); //todo: might be unnecessary
             }
         }
     }
@@ -981,15 +975,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     @NonNull
     public List<Float> getXPoints() {
         return new ArrayList<>(xPoints);
-    }
-
-    /**
-     * Returns a copy of current graphic Y points
-     * @return current graphic Y points
-     */
-    @NonNull
-    public List<Float> getYPoints() {
-        return new ArrayList<>(yPoints);
     }
 
     private void doPathAnimation() {

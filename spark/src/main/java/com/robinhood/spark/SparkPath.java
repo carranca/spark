@@ -8,7 +8,7 @@ import java.util.List;
 public class SparkPath {
   public final List<SparkPathSegment> segments = new LinkedList<>();
   @Nullable private SparkPathSegment currentSegment = null;
-  public final SparkViewModel.SparkPathType pathType;
+  private final SparkViewModel.SparkPathType pathType;
 
   SparkPath(SparkViewModel.SparkPathType pathType) {
     this.pathType = pathType;
@@ -17,10 +17,16 @@ public class SparkPath {
   SparkPath(SparkPath source) {
     this(source.pathType);
 
+    SparkPathSegment newCurrentSegment = null;
     for (SparkPathSegment sourceSegment : source.segments) {
       final SparkPathSegment newSegment = new SparkPathSegment(sourceSegment);
       segments.add(newSegment);
+      if (sourceSegment.equals(source.currentSegment)) {
+        newCurrentSegment = newSegment;
+      }
     }
+
+    currentSegment = newCurrentSegment;
   }
 
   void startSegment(float x, float y) {
@@ -62,23 +68,18 @@ public class SparkPath {
     }
   }
 
-  public void replaceSegment(int indexInSparkPath, SparkPathSegment linePath) {
-    SparkPathSegment oldSegment = segments.set(indexInSparkPath, linePath);
-    oldSegment.reset();
-  }
-
   public static class SparkPathSegment extends Path {
     public final List<Float> xPoints = new LinkedList<>();
-    final List<Float> yPoints = new LinkedList<>();
-    public final SparkViewModel.SparkPathType pathType;
-    public final int indexInSparkPath;
+    public final List<Float> yPoints = new LinkedList<>();
+    final SparkViewModel.SparkPathType pathType;
+    final int indexInSparkPath;
 
-    public SparkPathSegment(SparkViewModel.SparkPathType pathType, int indexInSparkPath) {
+    SparkPathSegment(SparkViewModel.SparkPathType pathType, int indexInSparkPath) {
       this.pathType = pathType;
       this.indexInSparkPath = indexInSparkPath;
     }
 
-    public SparkPathSegment(SparkPathSegment source) {
+    SparkPathSegment(SparkPathSegment source) {
       super(source);
       this.pathType = source.pathType;
       this.indexInSparkPath = source.indexInSparkPath;

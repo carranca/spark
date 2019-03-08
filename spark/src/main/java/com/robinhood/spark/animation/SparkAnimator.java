@@ -20,4 +20,11 @@ public interface SparkAnimator {
      */
     @Nullable
     Animator getAnimation(final SparkView sparkView);
+
+    /**
+     * Allows the animator to prime itself with initial values that it can use as reference
+     * for its subsequent animations.
+     * @param sparkView The SparkView object
+     */
+    void onNewPathsPopulated(final SparkView sparkView);
 }
