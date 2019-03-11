@@ -4,14 +4,17 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
-import android.graphics.Path;
 import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.robinhood.spark.SparkPath;
+import com.robinhood.spark.SparkPaths;
 import com.robinhood.spark.SparkView;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Animates each point vertically from the previous position to the current position.
@@ -19,22 +22,41 @@ import java.util.List;
 public class MorphSparkAnimator extends Animator implements SparkAnimator {
 
     private final ValueAnimator animator;
-    private @Nullable List<Float> oldYPoints;
-    private Path animationPath;
+    private Map<SparkPath.SparkPathSegment, List<Float>> oldYPointsBySegment = new HashMap<>();
+    private boolean animate = true;
 
     public MorphSparkAnimator() {
         animator = ValueAnimator.ofFloat(0, 1);
-        animationPath = new Path();
     }
 
     @Nullable
     @Override
     public Animator getAnimation(final SparkView sparkView) {
 
-        final List<Float> xPoints = sparkView.getXPoints();
-        final List<Float> yPoints = sparkView.getYPoints();
+        final SparkPaths sparkPaths = sparkView.getSparkPaths();
 
-        if (xPoints.isEmpty() || yPoints.isEmpty()) {
+        final Map<SparkPath.SparkPathSegment, List<Float>> xPointsBySegment = new HashMap<>();
+        final Map<SparkPath.SparkPathSegment, List<Float>> yPointsBySegment = new HashMap<>();
+
+        for (SparkPath sparkPath : sparkPaths.paths.values()) {
+            for (SparkPath.SparkPathSegment segment : sparkPath.segments) {
+                if (!segment.xPoints.isEmpty()) {
+                    xPointsBySegment.put(segment, new ArrayList<>(segment.xPoints));
+                }
+
+                if (!segment.yPoints.isEmpty()) {
+                    yPointsBySegment.put(segment, new ArrayList<>(segment.yPoints));
+                }
+
+            }
+        }
+
+        if (!animate) {
+            oldYPointsBySegment = yPointsBySegment;
+            return null;
+        }
+
+        if (xPointsBySegment.isEmpty() || yPointsBySegment.isEmpty()) {
             return null;
         }
 
@@ -43,41 +65,60 @@ public class MorphSparkAnimator extends Animator implements SparkAnimator {
             public void onAnimationUpdate(ValueAnimator animation) {
 
                 float animatedValue = (float) animation.getAnimatedValue();
+                for (SparkPath.SparkPathSegment segment : xPointsBySegment.keySet()) {
+                    @Nullable List<Float> oldYPoints = oldYPointsBySegment.get(segment);
+                    List<Float> xPoints = xPointsBySegment.get(segment);
+                    List<Float> yPoints = yPointsBySegment.get(segment);
 
-                animationPath.reset();
+                    float step;
+                    float x, y, oldY;
 
-                float step;
-                float y, oldY;
-                int size = xPoints.size();
-                for (int count = 0; count < size; count++) {
+                    segment.reset();
 
-                    // get oldY, can be 0 (zero) if current points are larger
-                    oldY = oldYPoints != null && oldYPoints.size() > count ? oldYPoints.get(count) : 0f;
+                    for (int i = 0; i < xPoints.size(); i++) {
+                        // get oldY, can be 0 (zero) if current points are larger
+                        oldY = oldYPoints != null && oldYPoints.size() > i ? oldYPoints.get(i) : 0f;
 
-                    step = yPoints.get(count) - oldY;
-                    y = (step * animatedValue) + oldY;
+                        step = yPoints.get(i) - oldY;
+                        y = (step * animatedValue) + oldY;
+                        x = xPoints.get(i);
 
-                    if (count == 0) {
-                        animationPath.moveTo(xPoints.get(count), y);
-                    } else {
-                        animationPath.lineTo(xPoints.get(count), y);
+                        if (i == 0) {
+                            segment.moveTo(x, y);
+                        } else {
+                            segment.lineTo(x, y);
+                        }
                     }
 
                 }
 
-                // set the updated path for the animation
-                sparkView.setAnimationPath(animationPath);
+                sparkView.setAnimationPath(sparkPaths);
             }
         });
 
         animator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                oldYPoints = yPoints;
+                oldYPointsBySegment = yPointsBySegment;
             }
         });
 
         return animator;
+    }
+
+    @Override public void onNewPathsPopulated(SparkView sparkView) {
+        if (!oldYPointsBySegment.isEmpty()) {
+            return;
+        }
+
+        for (SparkPath sparkPath : sparkView.getSparkPaths().paths.values()) {
+            for (SparkPath.SparkPathSegment segment : sparkPath.segments) {
+                if (!segment.yPoints.isEmpty()) {
+                    oldYPointsBySegment.put(segment, new ArrayList<>(segment.yPoints));
+                }
+
+            }
+        }
     }
 
     @Override
@@ -92,7 +133,7 @@ public class MorphSparkAnimator extends Animator implements SparkAnimator {
 
     @Override
     public Animator setDuration(@IntRange(from = 0) long duration) {
-        return animator;
+        return animator.setDuration(duration);
     }
 
     @Override
@@ -108,5 +149,9 @@ public class MorphSparkAnimator extends Animator implements SparkAnimator {
     @Override
     public boolean isRunning() {
         return animator.isRunning();
+    }
+
+    public void setAnimate(boolean animate) {
+        this.animate = animate;
     }
 }

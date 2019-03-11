@@ -3,12 +3,9 @@ package com.robinhood.spark.animation;
 import android.animation.Animator;
 import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
-import android.graphics.Path;
-import android.graphics.PathMeasure;
+import android.graphics.RectF;
 import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-
 import com.robinhood.spark.SparkView;
 
 /**
@@ -25,32 +22,27 @@ public class LineSparkAnimator extends Animator implements SparkAnimator {
     @Nullable
     @Override
     public Animator getAnimation(final SparkView sparkView) {
-        final Path linePath = sparkView.getSparkLinePath();
 
-        // get path length
-        final PathMeasure pathMeasure = new PathMeasure(linePath, false);
-        final float endLength = pathMeasure.getLength();
-
-        if (endLength <= 0) {
-            return null;
-        }
+        final RectF contentRect = sparkView.getContentRect();
 
         animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
+            @Override public void onAnimationUpdate(ValueAnimator animation) {
                 float animatedValue = (float) animation.getAnimatedValue();
 
-                float animatedPathLength = animatedValue * endLength;
-
-                linePath.reset();
-                pathMeasure.getSegment(0, animatedPathLength, linePath, true);
-
-                // set the updated path for the animation
-                sparkView.setAnimationPath(linePath);
+                float newWidth = (contentRect.right - contentRect.left) * animatedValue;
+                sparkView.setContentClip(new RectF(
+                    contentRect.left,
+                    contentRect.top,
+                    contentRect.left + newWidth,
+                    contentRect.bottom));
             }
         });
 
         return animator;
+    }
+
+    @Override public void onNewPathsPopulated(SparkView sparkView) {
+        // no-op
     }
 
     @Override

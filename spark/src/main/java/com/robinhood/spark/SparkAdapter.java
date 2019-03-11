@@ -21,6 +21,7 @@ import android.database.DataSetObserver;
 import android.graphics.RectF;
 import android.support.annotation.NonNull;
 import android.support.annotation.VisibleForTesting;
+import java.util.Set;
 
 /**
  * A simple adapter class - evenly distributes your points along the x axis, does not draw a base
@@ -53,11 +54,26 @@ public abstract class SparkAdapter {
     public abstract float getY(int index);
 
     /**
-     * @return Whether the point at the given index should be drawn connected to the graph.
-     * By default, every point in the adapter will connect to the graph.
+     * MUST return instances contained in the set returned by {@link #getSupportedPathTypes()}
+     * @return The path type for the path connecting to the point at the given index
      */
-    protected boolean shouldConnect(int index) {
-        return true;
+    protected abstract SparkPathType getPathType(int index);
+
+    /**
+     * Retrieves a complete list of {@link SparkPathType} instances that are supported by this
+     * adapter.
+     * Instances returned by {@link #getPathType(int)} MUST be included in this list.
+     */
+    protected abstract Set<SparkPathType> getSupportedPathTypes();
+
+    /**
+     * @return A class providing specific paints for drawing components of the graph.
+     * By default, returns a sane set of default paints.
+     * @see SparkPaintProvider
+     */
+    @NonNull
+    protected SparkPaintProvider getPaintProvider() {
+        return new SparkPaintProvider();
     }
 
     /**
