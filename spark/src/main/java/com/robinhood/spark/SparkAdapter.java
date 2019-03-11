@@ -85,6 +85,14 @@ public abstract class SparkAdapter {
     }
 
     /**
+     * @return Whether the scrub line should snap to the event at the given index.
+     * By default, no snapping will occur.
+     */
+    protected boolean shouldSnapToEvent(int index) {
+        return false;
+    }
+
+    /**
      * Gets the float representation of the boundaries of the entire dataset. By default, this will
      * be the min and max of the actual data points in the adapter. This can be overridden for
      * custom behavior. When overriding, make sure to set RectF's values such that:
