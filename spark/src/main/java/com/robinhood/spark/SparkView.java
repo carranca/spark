@@ -31,6 +31,7 @@ import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.util.Pair;
 import android.view.View;
 import android.view.ViewConfiguration;
 import com.robinhood.spark.animation.SparkAnimator;
@@ -53,6 +54,14 @@ import static com.robinhood.spark.GraphInteractionState.UNSCRUBBED;
  * A {@link SparkView} is a simplified line chart with no axes.
  */
 public class SparkView extends View implements ScrubGestureDetector.ScrubListener {
+
+    /**
+     * The distance from a graph event along the x axis within which we should consider
+     * snapping to that event while scrubbing.
+     * @see #getEventToSnapTo(float)
+     */
+    private static final float DEFAULT_EVENT_SNAP_DISTANCE = 20.0f;
+
     private @Nullable Float scrubLine;
 
     /**
@@ -128,7 +137,8 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     private final RectF contentRect = new RectF();
     private @Nullable RectF contentClip = null;
 
-    private List<Float> xPoints;
+    private List<Float> xPoints = new ArrayList<>();
+    private Map<Integer, Float> eventXPoints = new HashMap<>();
 
     public SparkView(Context context) {
         super(context);
@@ -166,8 +176,6 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         scrubGestureDetector = new ScrubGestureDetector(this, handler, touchSlop);
         scrubGestureDetector.setEnabled(scrubEnabled);
         setOnTouchListener(scrubGestureDetector);
-
-        xPoints = new ArrayList<>();
 
         if (isInEditMode()) {
             this.setAdapter(new SparkAdapter() {
@@ -215,11 +223,10 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
         // Reset points caches
         xPoints.clear();
-
-        // make our main graph path
-        eventsPath.reset();
+        eventXPoints.clear();
 
         // Reset all of our paths.
+        eventsPath.reset();
         sparkPaths.reset();
 
         SparkPathType currentPathType = null;
@@ -255,6 +262,7 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
                 dot.addCircle(x, y, eventDotRadius, Path.Direction.CW);
                 dot.close();
                 eventsPath.addPath(dot);
+                eventXPoints.put(i, x);
             }
         }
 
@@ -730,16 +738,35 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
 
     @Override
     public void onScrubbed(float x, float y) {
+
+        // If x is within the bounds of an event, snap to that event.
+        @Nullable Pair<Integer, Float> eventInfo = getEventToSnapTo(x);
+        if (eventInfo != null) {
+            x = eventInfo.second;
+        }
+
         if (adapter == null || adapter.getCount() == 0) return;
         if (scrubListener != null) {
             getParent().requestDisallowInterceptTouchEvent(true);
-            int index = getNearestIndex(xPoints, x);
+            int index = eventInfo != null ? eventInfo.first : getNearestIndex(xPoints, x);
             if (scrubListener != null) {
                 scrubListener.onScrubbed(adapter.getItem(index));
             }
         }
 
         setScrubLine(x);
+    }
+
+    private @Nullable Pair<Integer, Float> getEventToSnapTo(float x) {
+        for (Map.Entry<Integer, Float> event : eventXPoints.entrySet()) {
+            final float eventX = event.getValue();
+            if (Math.abs(eventX - x) < DEFAULT_EVENT_SNAP_DISTANCE
+                && adapter != null && adapter.shouldSnapToEvent(event.getKey())) {
+                return new Pair<>(event.getKey(), event.getValue());
+            }
+        }
+
+        return null;
     }
 
     @Override
