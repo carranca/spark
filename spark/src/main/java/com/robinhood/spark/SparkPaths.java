@@ -5,19 +5,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SparkPaths {
-  public final Map<SparkViewModel.SparkPathType, SparkPath> paths = new HashMap<>();
+  public final Map<SparkPathType, SparkPath> paths = new HashMap<>();
 
   SparkPaths() {
 
   }
 
   SparkPaths(SparkPaths source) {
-    for (SparkViewModel.SparkPathType pathType : source.paths.keySet()) {
+    for (SparkPathType pathType : source.paths.keySet()) {
       paths.put(pathType, new SparkPath(source.paths.get(pathType)));
     }
   }
 
-  void startPathSegment(SparkViewModel.SparkPathType pathType, float x, float y) {
+  void startPathSegment(SparkPathType pathType, float x, float y) {
     SparkPath sparkPath = paths.get(pathType);
     if (sparkPath == null) {
       sparkPath = new SparkPath(pathType);
@@ -28,7 +28,7 @@ public class SparkPaths {
   }
 
   void endPathSegment(
-      SparkViewModel.SparkPathType pathType,
+      SparkPathType pathType,
       @Nullable Float fillEdge,
       int startPadding
   ) {
@@ -40,7 +40,7 @@ public class SparkPaths {
     sparkPath.endSegment(fillEdge, startPadding);
   }
 
-  void addToPathSegment(SparkViewModel.SparkPathType pathType, float x, float y) {
+  void addToPathSegment(SparkPathType pathType, float x, float y) {
     SparkPath sparkPath = paths.get(pathType);
     if (sparkPath == null) {
       throw new IllegalStateException("Trying to add to path segment, but no such path exists");
@@ -50,7 +50,7 @@ public class SparkPaths {
   }
 
   void reset() {
-    for (SparkViewModel.SparkPathType pathType : paths.keySet()) {
+    for (SparkPathType pathType : paths.keySet()) {
       paths.get(pathType).reset();
     }
   }

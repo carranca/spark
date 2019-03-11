@@ -4,17 +4,13 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
-import android.graphics.Path;
 import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import android.util.Log;
 import com.robinhood.spark.SparkPath;
 import com.robinhood.spark.SparkPaths;
 import com.robinhood.spark.SparkView;
 
-import com.robinhood.spark.SparkViewModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,7 +23,7 @@ public class MorphSparkAnimator extends Animator implements SparkAnimator {
 
     private final ValueAnimator animator;
     private Map<SparkPath.SparkPathSegment, List<Float>> oldYPointsBySegment = new HashMap<>();
-    private boolean animate;
+    private boolean animate = true;
 
     public MorphSparkAnimator() {
         animator = ValueAnimator.ofFloat(0, 1);

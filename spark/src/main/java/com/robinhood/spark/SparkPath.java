@@ -8,9 +8,9 @@ import java.util.List;
 public class SparkPath {
   public final List<SparkPathSegment> segments = new LinkedList<>();
   @Nullable private SparkPathSegment currentSegment = null;
-  private final SparkViewModel.SparkPathType pathType;
+  private final SparkPathType pathType;
 
-  SparkPath(SparkViewModel.SparkPathType pathType) {
+  SparkPath(SparkPathType pathType) {
     this.pathType = pathType;
   }
 
@@ -71,10 +71,10 @@ public class SparkPath {
   public static class SparkPathSegment extends Path {
     public final List<Float> xPoints = new LinkedList<>();
     public final List<Float> yPoints = new LinkedList<>();
-    final SparkViewModel.SparkPathType pathType;
+    final SparkPathType pathType;
     final int indexInSparkPath;
 
-    SparkPathSegment(SparkViewModel.SparkPathType pathType, int indexInSparkPath) {
+    SparkPathSegment(SparkPathType pathType, int indexInSparkPath) {
       this.pathType = pathType;
       this.indexInSparkPath = indexInSparkPath;
     }

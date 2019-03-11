@@ -29,11 +29,16 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.robinhood.spark.SparkAdapter;
+import com.robinhood.spark.SparkPathType;
 import com.robinhood.spark.SparkView;
 import com.robinhood.spark.animation.LineSparkAnimator;
 import com.robinhood.spark.animation.MorphSparkAnimator;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -154,6 +159,15 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public float getY(int index) {
             return yData[index];
+        }
+
+        @Override protected SparkPathType getPathType(int index) {
+            return SparkPathType.Legacy.INSTANCE;
+        }
+
+        @Override protected Set<SparkPathType> getSupportedPathTypes() {
+            return new HashSet<>(
+                Collections.<SparkPathType>singletonList(SparkPathType.Legacy.INSTANCE));
         }
     }
 }
