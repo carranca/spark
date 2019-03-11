@@ -140,6 +140,11 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
     private List<Float> xPoints = new ArrayList<>();
     private Map<Integer, Float> eventXPoints = new HashMap<>();
 
+    /**
+     * The last index that the {@link #scrubListener} was notified of us scrubbing to.
+     */
+    private int lastIndexSentToScrubListener = -1;
+
     public SparkView(Context context) {
         super(context);
         init(context, null, R.attr.spark_SparkViewStyle, R.style.spark_SparkView);
@@ -749,7 +754,8 @@ public class SparkView extends View implements ScrubGestureDetector.ScrubListene
         if (scrubListener != null) {
             getParent().requestDisallowInterceptTouchEvent(true);
             int index = eventInfo != null ? eventInfo.first : getNearestIndex(xPoints, x);
-            if (scrubListener != null) {
+            if (scrubListener != null && index != lastIndexSentToScrubListener) {
+                lastIndexSentToScrubListener = index;
                 scrubListener.onScrubbed(adapter.getItem(index));
             }
         }
